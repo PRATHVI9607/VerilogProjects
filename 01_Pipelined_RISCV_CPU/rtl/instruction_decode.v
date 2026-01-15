@@ -76,8 +76,11 @@ module instruction_decode (
     end
     
     // Register file write (WB stage writes)
-    always @(posedge clk) begin
-        if (wb_enable && wb_rd != 5'b0) begin
+    // Write on negedge so value is available for read on next posedge
+    always @(negedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            // Don't need to reset register file
+        end else if (wb_enable && wb_rd != 5'b0) begin
             regfile[wb_rd] <= wb_data;
         end
     end

@@ -59,9 +59,13 @@ module tb_riscv_cpu;
                     dut.if_pc, dut.if_instruction, dut.if_valid);
             $display("  ID:  PC=%h RS1=%d RS2=%d RD=%d Valid=%b",
                     dut.id_pc, dut.id_rs1_addr, dut.id_rs2_addr, dut.id_rd, dut.id_valid);
+            $display("       RS1_data=%h RS2_data=%h",
+                    dut.u_ex.rs1_data_in, dut.u_ex.rs2_data_in);
             $display("  EX:  ALU_Result=%h RD=%d Valid=%b FwdA=%b FwdB=%b",
                     dut.ex_alu_result, dut.ex_rd, dut.ex_valid, 
                     dut.fwd_a_sel, dut.fwd_b_sel);
+            $display("       ALU_OpA=%h ALU_OpB=%h ALUOp=%h",
+                    dut.u_ex.alu_operand_a, dut.u_ex.alu_operand_b, dut.u_ex.alu_op_in);
             $display("  MEM: ALU_Result=%h MemData=%h RD=%d Valid=%b",
                     dut.mem_alu_result, dut.mem_mem_data, dut.mem_rd, dut.mem_valid);
             $display("  WB:  Data=%h RD=%d Enable=%b",

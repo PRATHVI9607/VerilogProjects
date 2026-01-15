@@ -142,9 +142,11 @@ riscv_cpu (top)
 **Register File Specifications**:
 - **Size**: 32 registers × 32 bits
 - **Ports**: 2 read ports, 1 write port
-- **Write**: Synchronous on rising edge
-- **Read**: Asynchronous/combinational
+- **Write**: On **negative edge** (negedge) to ensure written value is available for next read
+- **Read**: On positive edge (synchronous within pipeline register)
 - **x0 Special**: Always reads as 0, writes ignored
+
+**Critical Design Note**: The register file write occurs on the negative clock edge (`negedge clk`) while reads occur on the positive edge (`posedge clk`). This ensures that when an instruction writes to a register, the updated value is immediately available for the next instruction to read, even without forwarding from the WB stage. This is essential for back-to-back register dependencies.
 
 **Instruction Format Decoding**:
 
