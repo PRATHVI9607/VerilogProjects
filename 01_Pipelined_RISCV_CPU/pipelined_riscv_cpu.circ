@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project source="3.8.0" version="1.0">
+  This file is intended to be loaded by Logisim-evolution v3.8.0(https://github.com/logisim-evolution/).
+
+  <lib desc="#Wiring" name="0">
+    <tool name="Splitter">
+      <a name="facing" val="west"/>
+      <a name="fanout" val="3"/>
+      <a name="incoming" val="3"/>
+    </tool>
+    <tool name="Constant">
+      <a name="facing" val="north"/>
+    </tool>
+  </lib>
+  <lib desc="#Gates" name="1"/>
+  <lib desc="#Plexers" name="2"/>
+  <lib desc="#Arithmetic" name="3"/>
+  <lib desc="#Memory" name="4"/>
+  <lib desc="#Base" name="5">
+    <tool name="Text Tool">
+      <a name="font" val="SansSerif plain 12"/>
+    </tool>
+  </lib>
+  <main name="main"/>
+  
+  <circuit name="main">
+    <a name="appearance" val="logisim_evolution"/>
+    <a name="circuit" val="main"/>
+    <a name="circuitnamedboxfixedsize" val="true"/>
+    <a name="simulationFrequency" val="1.0"/>
+    
+    <comp lib="5" loc="(400,50)" name="Text">
+      <a name="text" val="5-Stage Pipelined RISC-V CPU"/>
+      <a name="font" val="SansSerif bold 20"/>
+    </comp>
+    
+    <!-- Clock and Reset -->
+    <comp lib="0" loc="(80,100)" name="Clock">
+      <a name="label" val="CLK"/>
+    </comp>
+    <comp lib="0" loc="(80,140)" name="Pin">
+      <a name="label" val="RST"/>
+    </comp>
+    
+    <!-- IF Stage -->
+    <comp lib="5" loc="(150,200)" name="Text">
+      <a name="text" val="IF STAGE"/>
+      <a name="font" val="SansSerif bold 14"/>
+    </comp>
+    <comp lib="4" loc="(150,250)" name="Register">
+      <a name="width" val="32"/>
+      <a name="label" val="PC"/>
+    </comp>
+    <comp lib="4" loc="(150,320)" name="ROM">
+      <a name="addrWidth" val="8"/>
+      <a name="dataWidth" val="32"/>
+      <a name="label" val="Instr_Mem"/>
+    </comp>
+    <comp lib="3" loc="(120,280)" name="Adder">
+      <a name="width" val="32"/>
+    </comp>
+    <comp lib="0" loc="(100,300)" name="Constant">
+      <a name="width" val="32"/>
+      <a name="value" val="4"/>
+    </comp>
+    
+    <!-- IF/ID Pipeline Register -->
+    <comp lib="5" loc="(280,200)" name="Text">
+      <a name="text" val="IF/ID"/>
+      <a name="font" val="SansSerif bold 12"/>
+    </comp>
+    <comp lib="4" loc="(280,250)" name="Register">
+      <a name="width" val="32"/>
+      <a name="label" val="IF_ID_PC"/>
+    </comp>
+    <comp lib="4" loc="(280,310)" name="Register">
+      <a name="width" val="32"/>
+      <a name="label" val="IF_ID_Instr"/>
+    </comp>
+    
+    <!-- ID Stage -->
+    <comp lib="5" loc="(400,200)" name="Text">
+      <a name="text" val="ID STAGE"/>
+      <a name="font" val="SansSerif bold 14"/>
+    </comp>
+    <comp lib="4" loc="(400,250)" name="RAM">
+      <a name="addrWidth" val="5"/>
+      <a name="dataWidth" val="32"/>
+      <a name="label" val="RegFile"/>
+    </comp>
+    <comp lib="5" loc="(380,300)" name="Text">
+      <a name="text" val="Decode"/>
+    </comp>
+    <comp lib="5" loc="(380,330)" name="Text">
+      <a name="text" val="Logic"/>
+    </comp>
+    
+    <!-- ID/EX Pipeline Register -->
+    <comp lib="5" loc="(530,200)" name="Text">
+      <a name="text" val="ID/EX"/>
+      <a name="font" val="SansSerif bold 12"/>
+    </comp>
+    <comp lib="4" loc="(530,250)" name="Register">
+      <a name="width" val="32"/>
+      <a name="label" val="ID_EX_RS1"/>
+    </comp>
+    <comp lib="4" loc="(530,300)" name="Register">
+      <a name="width" val="32"/>
+      <a name="label" val="ID_EX_RS2"/>
+    </comp>
+    <comp lib="4" loc="(530,350)" name="Register">
+      <a name="width" val="32"/>
+      <a name="label" val="ID_EX_Imm"/>
+    </comp>
+    
+    <!-- EX Stage -->
+    <comp lib="5" loc="(660,200)" name="Text">
+      <a name="text" val="EX STAGE"/>
+      <a name="font" val="SansSerif bold 14"/>
+    </comp>
+    <comp lib="2" loc="(630,270)" name="Multiplexer">
+      <a name="width" val="32"/>
+      <a name="label" val="Fwd_A"/>
+    </comp>
+    <comp lib="2" loc="(630,320)" name="Multiplexer">
+      <a name="width" val="32"/>
+      <a name="label" val="Fwd_B"/>
+    </comp>
+    <comp lib="3" loc="(680,290)" name="Adder">
+      <a name="width" val="32"/>
+      <a name="label" val="ALU"/>
+    </comp>
+    <comp lib="5" loc="(750,240)" name="Text">
+      <a name="text" val="Branch"/>
+    </comp>
+    <comp lib="5" loc="(750,260)" name="Text">
+      <a name="text" val="Logic"/>
+    </comp>
+    
+    <!-- EX/MEM Pipeline Register -->
+    <comp lib="5" loc="(800,200)" name="Text">
+      <a name="text" val="EX/MEM"/>
+      <a name="font" val="SansSerif bold 12"/>
+    </comp>
+    <comp lib="4" loc="(800,250)" name="Register">
+      <a name="width" val="32"/>
+      <a name="label" val="EX_MEM_ALU"/>
+    </comp>
+    <comp lib="4" loc="(800,310)" name="Register">
+      <a name="width" val="32"/>
+      <a name="label" val="EX_MEM_Data"/>
+    </comp>
+    
+    <!-- MEM Stage -->
+    <comp lib="5" loc="(920,200)" name="Text">
+      <a name="text" val="MEM STAGE"/>
+      <a name="font" val="SansSerif bold 14"/>
+    </comp>
+    <comp lib="4" loc="(920,280)" name="RAM">
+      <a name="addrWidth" val="10"/>
+      <a name="dataWidth" val="32"/>
+      <a name="label" val="Data_Mem"/>
+    </comp>
+    
+    <!-- MEM/WB Pipeline Register -->
+    <comp lib="5" loc="(1050,200)" name="Text">
+      <a name="text" val="MEM/WB"/>
+      <a name="font" val="SansSerif bold 12"/>
+    </comp>
+    <comp lib="4" loc="(1050,250)" name="Register">
+      <a name="width" val="32"/>
+      <a name="label" val="MEM_WB_Data"/>
+    </comp>
+    <comp lib="4" loc="(1050,310)" name="Register">
+      <a name="width" val="5"/>
+      <a name="label" val="MEM_WB_RD"/>
+    </comp>
+    
+    <!-- WB Stage -->
+    <comp lib="5" loc="(1170,200)" name="Text">
+      <a name="text" val="WB STAGE"/>
+      <a name="font" val="SansSerif bold 14"/>
+    </comp>
+    <comp lib="2" loc="(1170,270)" name="Multiplexer">
+      <a name="width" val="32"/>
+      <a name="label" val="WB_Mux"/>
+    </comp>
+    
+    <!-- Forwarding Unit (below pipeline) -->
+    <comp lib="5" loc="(650,450)" name="Text">
+      <a name="text" val="FORWARDING UNIT"/>
+      <a name="font" val="SansSerif bold 14"/>
+    </comp>
+    <comp lib="5" loc="(580,480)" name="Text">
+      <a name="text" val="Detects RAW hazards"/>
+    </comp>
+    <comp lib="5" loc="(580,500)" name="Text">
+      <a name="text" val="Controls Fwd_A/Fwd_B muxes"/>
+    </comp>
+    
+    <!-- Hazard Detection Unit -->
+    <comp lib="5" loc="(350,450)" name="Text">
+      <a name="text" val="HAZARD UNIT"/>
+      <a name="font" val="SansSerif bold 14"/>
+    </comp>
+    <comp lib="5" loc="(300,480)" name="Text">
+      <a name="text" val="Load-Use stalls"/>
+    </comp>
+    <comp lib="5" loc="(300,500)" name="Text">
+      <a name="text" val="Branch flush"/>
+    </comp>
+    
+    <!-- Data forwarding paths (arrows) -->
+    <wire from="(800,250)" to="(650,320)"/>
+    <wire from="(1050,250)" to="(650,270)"/>
+    <wire from="(1170,270)" to="(400,350)"/>
+    
+    <!-- Pipeline flow lines -->
+    <wire from="(150,250)" to="(280,250)"/>
+    <wire from="(280,310)" to="(400,250)"/>
+    <wire from="(400,250)" to="(530,250)"/>
+    <wire from="(530,250)" to="(680,290)"/>
+    <wire from="(680,290)" to="(800,250)"/>
+    <wire from="(800,250)" to="(920,280)"/>
+    <wire from="(920,280)" to="(1050,250)"/>
+    <wire from="(1050,250)" to="(1170,270)"/>
+    
+    <!-- Control signals -->
+    <comp lib="5" loc="(450,550)" name="Text">
+      <a name="text" val="Control Signals: MemRead, MemWrite, RegWrite, ALUOp, Branch"/>
+    </comp>
+    
+    <!-- Legend -->
+    <comp lib="5" loc="(150,600)" name="Text">
+      <a name="text" val="Pipeline Stages:"/>
+      <a name="font" val="SansSerif bold 12"/>
+    </comp>
+    <comp lib="5" loc="(150,620)" name="Text">
+      <a name="text" val="IF  - Instruction Fetch"/>
+    </comp>
+    <comp lib="5" loc="(150,640)" name="Text">
+      <a name="text" val="ID  - Instruction Decode"/>
+    </comp>
+    <comp lib="5" loc="(150,660)" name="Text">
+      <a name="text" val="EX  - Execute"/>
+    </comp>
+    <comp lib="5" loc="(150,680)" name="Text">
+      <a name="text" val="MEM - Memory Access"/>
+    </comp>
+    <comp lib="5" loc="(150,700)" name="Text">
+      <a name="text" val="WB  - Write Back"/>
+    </comp>
+    
+    <comp lib="5" loc="(400,600)" name="Text">
+      <a name="text" val="Features:"/>
+      <a name="font" val="SansSerif bold 12"/>
+    </comp>
+    <comp lib="5" loc="(400,620)" name="Text">
+      <a name="text" val="• Data Forwarding (EX-EX, MEM-EX)"/>
+    </comp>
+    <comp lib="5" loc="(400,640)" name="Text">
+      <a name="text" val="• Hazard Detection (Load-Use)"/>
+    </comp>
+    <comp lib="5" loc="(400,660)" name="Text">
+      <a name="text" val="• Branch Prediction (Flush on taken)"/>
+    </comp>
+    <comp lib="5" loc="(400,680)" name="Text">
+      <a name="text" val="• RV32I Base Instruction Set"/>
+    </comp>
+    
+    <comp lib="5" loc="(700,600)" name="Text">
+      <a name="text" val="Forwarding Paths:"/>
+      <a name="font" val="SansSerif bold 12"/>
+    </comp>
+    <comp lib="5" loc="(700,620)" name="Text">
+      <a name="text" val="EX/MEM → EX (bypass recent ALU)"/>
+    </comp>
+    <comp lib="5" loc="(700,640)" name="Text">
+      <a name="text" val="MEM/WB → EX (bypass older result)"/>
+    </comp>
+    <comp lib="5" loc="(700,660)" name="Text">
+      <a name="text" val="MEM/WB → ID (writeback to regfile)"/>
+    </comp>
+    
+  </circuit>
+</project>
