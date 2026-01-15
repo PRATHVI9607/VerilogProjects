@@ -24,6 +24,11 @@ module instruction_fetch (
     // Load from program.hex file or use default
     initial begin
         integer i;
+        // Fill all with NOPs first
+        for (i = 0; i < 256; i = i + 1) begin
+            imem[i] = 32'h00000013;  // nop (addi x0, x0, 0)
+        end
+        
         // Try to load from external file first
         if ($fopen("program.hex", "r") != 0) begin
             $readmemh("program.hex", imem);
@@ -47,10 +52,6 @@ module instruction_fetch (
             imem[13] = 32'h00100613;  // addi x12, x0, 1
             imem[14] = 32'h00200693;  // addi x13, x0, 2
             imem[15] = 32'h00300713;  // addi x14, x0, 3
-        end
-        // Fill rest with NOPs
-        for (i = 16; i < 256; i = i + 1) begin
-            imem[i] = 32'h00000013;  // nop (addi x0, x0, 0)
         end
     end
     

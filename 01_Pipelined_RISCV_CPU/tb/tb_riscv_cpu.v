@@ -50,7 +50,7 @@ module tb_riscv_cpu;
         $display("\nStarting pipeline execution...\n");
         
         // Run for enough cycles to execute test program
-        repeat(50) begin
+        repeat(100) begin
             @(posedge clk);
             
             // Display pipeline status
@@ -94,6 +94,18 @@ module tb_riscv_cpu;
         $display("x12 = %h (%0d)", dut.u_id.regfile[12], dut.u_id.regfile[12]);
         $display("x13 = %h (%0d)", dut.u_id.regfile[13], dut.u_id.regfile[13]);
         $display("x14 = %h (%0d)", dut.u_id.regfile[14], dut.u_id.regfile[14]);
+        $display("x15 = %h (%0d)", dut.u_id.regfile[15], dut.u_id.regfile[15]);
+        $display("x16 = %h (%0d)", dut.u_id.regfile[16], dut.u_id.regfile[16]);
+        $display("x17 = %h (%0d)", dut.u_id.regfile[17], dut.u_id.regfile[17]);
+        $display("x18 = %h (%0d)", dut.u_id.regfile[18], dut.u_id.regfile[18]);
+        $display("x19 = %h (%0d)", dut.u_id.regfile[19], dut.u_id.regfile[19]);
+        $display("x20 = %h (%0d)", dut.u_id.regfile[20], dut.u_id.regfile[20]);
+        $display("x21 = %h (%0d)", dut.u_id.regfile[21], dut.u_id.regfile[21]);
+        $display("x22 = %h (%0d)", dut.u_id.regfile[22], $signed(dut.u_id.regfile[22]));
+        $display("x23 = %h (%0d)", dut.u_id.regfile[23], $signed(dut.u_id.regfile[23]));
+        $display("x24 = %h (%0d)", dut.u_id.regfile[24], dut.u_id.regfile[24]);
+        $display("x25 = %h (%0d)", dut.u_id.regfile[25], dut.u_id.regfile[25]);
+        $display("x26 = %h (%0d)", dut.u_id.regfile[26], dut.u_id.regfile[26]);
         
         $display("\n===========================================");
         $display("Simulation Complete!");
