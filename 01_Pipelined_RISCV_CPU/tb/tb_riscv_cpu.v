@@ -106,6 +106,11 @@ module tb_riscv_cpu;
         $display("x24 = %h (%0d)", dut.u_id.regfile[24], dut.u_id.regfile[24]);
         $display("x25 = %h (%0d)", dut.u_id.regfile[25], dut.u_id.regfile[25]);
         $display("x26 = %h (%0d)", dut.u_id.regfile[26], dut.u_id.regfile[26]);
+        $display("x27 = %h (%0d)", dut.u_id.regfile[27], dut.u_id.regfile[27]);
+        $display("x28 = %h (%0d)", dut.u_id.regfile[28], dut.u_id.regfile[28]);
+        $display("x29 = %h (%0d)", dut.u_id.regfile[29], dut.u_id.regfile[29]);
+        $display("x30 = %h (%0d)", dut.u_id.regfile[30], dut.u_id.regfile[30]);
+        $display("x31 = %h (%0d)", dut.u_id.regfile[31], dut.u_id.regfile[31]);
         
         $display("\n===========================================");
         $display("Simulation Complete!");
