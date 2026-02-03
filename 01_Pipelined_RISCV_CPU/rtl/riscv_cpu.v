@@ -5,7 +5,11 @@
 
 module riscv_cpu (
     input  wire clk,
-    input  wire rst_n
+    input  wire rst_n,
+    
+    // Flag register outputs
+    output wire [3:0]  flags,          // {V, C, N, Z} - Overflow, Carry, Negative, Zero
+    output wire        flags_valid     // Flag update valid signal
 );
 
     // IF stage outputs
@@ -46,6 +50,14 @@ module riscv_cpu (
     wire [31:0] branch_target;
     wire [1:0]  fwd_a_sel;
     wire [1:0]  fwd_b_sel;
+    
+    // Flag register signals from EX stage
+    wire [3:0]  ex_flags;
+    wire        ex_flags_valid;
+    
+    // Registered flag outputs
+    reg  [3:0]  flag_register;
+    reg         flag_reg_valid;
     
     // MEM stage outputs
     wire [31:0] mem_alu_result;
@@ -151,7 +163,9 @@ module riscv_cpu (
         .branch_taken   (branch_taken),
         .branch_target  (branch_target),
         .fwd_a_sel      (fwd_a_sel),
-        .fwd_b_sel      (fwd_b_sel)
+        .fwd_b_sel      (fwd_b_sel),
+        .flags_out      (ex_flags),
+        .flags_valid    (ex_flags_valid)
     );
     
     // Memory Stage
@@ -214,5 +228,22 @@ module riscv_cpu (
         .forward_a        (forward_a),
         .forward_b        (forward_b)
     );
+    
+    // Flag Register - Updated on valid ALU operations
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            flag_register <= 4'b0;
+            flag_reg_valid <= 1'b0;
+        end else if (ex_flags_valid) begin
+            flag_register <= ex_flags;
+            flag_reg_valid <= 1'b1;
+        end else begin
+            flag_reg_valid <= 1'b0;
+        end
+    end
+    
+    // Output assignments
+    assign flags = flag_register;
+    assign flags_valid = flag_reg_valid;
 
 endmodule

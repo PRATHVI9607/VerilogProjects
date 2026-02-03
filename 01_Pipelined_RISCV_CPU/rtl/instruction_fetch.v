@@ -20,17 +20,22 @@ module instruction_fetch (
     // Simple instruction memory (ROM) - 1KB
     reg [31:0] imem [0:255];
     
+    // Loop variable and file descriptor for initialization
+    integer i;
+    integer fd;
+    
     // Initialize instruction memory with test program
     // Load from program.hex file or use default
     initial begin
-        integer i;
         // Fill all with NOPs first
         for (i = 0; i < 256; i = i + 1) begin
             imem[i] = 32'h00000013;  // nop (addi x0, x0, 0)
         end
         
         // Try to load from external file first
-        if ($fopen("program.hex", "r") != 0) begin
+        fd = $fopen("program.hex", "r");
+        if (fd != 0) begin
+            $fclose(fd);
             $readmemh("program.hex", imem);
             $display("INFO: Loaded program from program.hex");
         end else begin

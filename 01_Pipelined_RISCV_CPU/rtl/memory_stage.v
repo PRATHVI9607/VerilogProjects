@@ -36,37 +36,41 @@ module memory_stage (
     // Memory read data
     reg [31:0] read_data;
     
-    // Forwarding path
-    assign mem_result = alu_result_in;
+    // Forwarding path - return correct data based on instruction type
+    // For loads: forward the read_data; for ALU ops: forward ALU result
+    assign mem_result = mem_to_reg_in ? read_data : alu_result_in;
     
     // Initialize data memory
-    integer i;
+    integer mem_idx;
     initial begin
-        for (i = 0; i < 1024; i = i + 1) begin
-            dmem[i] = 8'b0;
+        for (mem_idx = 0; mem_idx < 1024; mem_idx = mem_idx + 1) begin
+            dmem[mem_idx] = 8'b0;
         end
     end
     
-    // Memory operations (combinational read, sequential write)
+    // Memory read address calculation
+    wire [9:0] mem_addr = alu_result_in[9:0];
+    
+    // Memory operations (combinational read)
     always @(*) begin
         if (mem_read_in && valid_in) begin
             case (funct3_in)
                 3'b000: begin  // LB - Load Byte (signed)
-                    read_data = {{24{dmem[alu_result_in[9:0]][7]}}, dmem[alu_result_in[9:0]]};
+                    read_data = {{24{dmem[mem_addr][7]}}, dmem[mem_addr]};
                 end
                 3'b001: begin  // LH - Load Halfword (signed)
-                    read_data = {{16{dmem[alu_result_in[9:0]+1][7]}}, 
-                                dmem[alu_result_in[9:0]+1], dmem[alu_result_in[9:0]]};
+                    read_data = {{16{dmem[mem_addr+1][7]}}, 
+                                dmem[mem_addr+1], dmem[mem_addr]};
                 end
                 3'b010: begin  // LW - Load Word
-                    read_data = {dmem[alu_result_in[9:0]+3], dmem[alu_result_in[9:0]+2],
-                                dmem[alu_result_in[9:0]+1], dmem[alu_result_in[9:0]]};
+                    read_data = {dmem[mem_addr+3], dmem[mem_addr+2],
+                                dmem[mem_addr+1], dmem[mem_addr]};
                 end
                 3'b100: begin  // LBU - Load Byte Unsigned
-                    read_data = {24'b0, dmem[alu_result_in[9:0]]};
+                    read_data = {24'b0, dmem[mem_addr]};
                 end
                 3'b101: begin  // LHU - Load Halfword Unsigned
-                    read_data = {16'b0, dmem[alu_result_in[9:0]+1], dmem[alu_result_in[9:0]]};
+                    read_data = {16'b0, dmem[mem_addr+1], dmem[mem_addr]};
                 end
                 default: read_data = 32'b0;
             endcase
@@ -75,22 +79,22 @@ module memory_stage (
         end
     end
     
-    // Memory write
+    // Memory write (with reset guard to prevent garbage writes)
     always @(posedge clk) begin
-        if (mem_write_in && valid_in) begin
+        if (rst_n && mem_write_in && valid_in) begin
             case (funct3_in)
                 3'b000: begin  // SB - Store Byte
-                    dmem[alu_result_in[9:0]] <= rs2_data_in[7:0];
+                    dmem[mem_addr] <= rs2_data_in[7:0];
                 end
                 3'b001: begin  // SH - Store Halfword
-                    dmem[alu_result_in[9:0]]   <= rs2_data_in[7:0];
-                    dmem[alu_result_in[9:0]+1] <= rs2_data_in[15:8];
+                    dmem[mem_addr]   <= rs2_data_in[7:0];
+                    dmem[mem_addr+1] <= rs2_data_in[15:8];
                 end
                 3'b010: begin  // SW - Store Word
-                    dmem[alu_result_in[9:0]]   <= rs2_data_in[7:0];
-                    dmem[alu_result_in[9:0]+1] <= rs2_data_in[15:8];
-                    dmem[alu_result_in[9:0]+2] <= rs2_data_in[23:16];
-                    dmem[alu_result_in[9:0]+3] <= rs2_data_in[31:24];
+                    dmem[mem_addr]   <= rs2_data_in[7:0];
+                    dmem[mem_addr+1] <= rs2_data_in[15:8];
+                    dmem[mem_addr+2] <= rs2_data_in[23:16];
+                    dmem[mem_addr+3] <= rs2_data_in[31:24];
                 end
                 default: ;
             endcase

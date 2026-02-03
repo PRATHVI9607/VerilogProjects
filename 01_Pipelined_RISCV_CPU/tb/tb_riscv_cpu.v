@@ -9,6 +9,14 @@ module tb_riscv_cpu;
     reg clk;
     reg rst_n;
     
+    // Flag register outputs
+    wire [3:0] flags;
+    wire       flags_valid;
+    
+    // Test verification
+    integer error_count;
+    reg [31:0] x1_val, x2_val, expected;
+    
     // Clock generation - 100MHz
     initial begin
         clk = 0;
@@ -17,8 +25,10 @@ module tb_riscv_cpu;
     
     // Instantiate DUT
     riscv_cpu dut (
-        .clk   (clk),
-        .rst_n (rst_n)
+        .clk         (clk),
+        .rst_n       (rst_n),
+        .flags       (flags),
+        .flags_valid (flags_valid)
     );
     
     // VCD dump for GTKWave
@@ -72,6 +82,8 @@ module tb_riscv_cpu;
                     dut.wb_data, dut.wb_rd, dut.wb_enable);
             $display("  Hazard: StallIF=%b StallID=%b FlushEX=%b",
                     dut.stall_if, dut.stall_id, dut.flush_ex);
+            $display("  FLAGS:  Z=%b N=%b C=%b V=%b (Valid=%b)",
+                    flags[0], flags[1], flags[2], flags[3], flags_valid);
             $display("  Branch: Taken=%b Target=%h\n",
                     dut.branch_taken, dut.branch_target);
         end
@@ -111,6 +123,63 @@ module tb_riscv_cpu;
         $display("x29 = %h (%0d)", dut.u_id.regfile[29], dut.u_id.regfile[29]);
         $display("x30 = %h (%0d)", dut.u_id.regfile[30], dut.u_id.regfile[30]);
         $display("x31 = %h (%0d)", dut.u_id.regfile[31], dut.u_id.regfile[31]);
+        
+        // ============ Automated Verification ============
+        // Flexible verification - computes expected values from actual x1, x2
+        $display("\n===========================================");
+        $display("Automated Test Results:");
+        $display("===========================================");
+        error_count = 0;
+        
+        // Get actual x1 and x2 values (set by program)
+        x1_val = dut.u_id.regfile[1];
+        x2_val = dut.u_id.regfile[2];
+        $display("Testing with x1=%0d, x2=%0d", x1_val, x2_val);
+        $display("");
+        
+        // Verify ADD: x3 = x1 + x2
+        expected = x1_val + x2_val;
+        if (dut.u_id.regfile[3] !== expected) begin
+            $display("FAIL: x3 = %0d, expected %0d (ADD)", dut.u_id.regfile[3], expected);
+            error_count = error_count + 1;
+        end else $display("PASS: x3 = %0d (ADD: %0d + %0d)", dut.u_id.regfile[3], x1_val, x2_val);
+        
+        // Verify SUB: x4 = x1 - x2
+        expected = x1_val - x2_val;
+        if (dut.u_id.regfile[4] !== expected) begin
+            $display("FAIL: x4 = %h, expected %h (SUB)", dut.u_id.regfile[4], expected);
+            error_count = error_count + 1;
+        end else $display("PASS: x4 = %0d (SUB: %0d - %0d)", $signed(dut.u_id.regfile[4]), x1_val, x2_val);
+        
+        // Verify AND: x5 = x1 & x2
+        expected = x1_val & x2_val;
+        if (dut.u_id.regfile[5] !== expected) begin
+            $display("FAIL: x5 = %0d, expected %0d (AND)", dut.u_id.regfile[5], expected);
+            error_count = error_count + 1;
+        end else $display("PASS: x5 = %0d (AND: %0d & %0d)", dut.u_id.regfile[5], x1_val, x2_val);
+        
+        // Verify OR: x6 = x1 | x2
+        expected = x1_val | x2_val;
+        if (dut.u_id.regfile[6] !== expected) begin
+            $display("FAIL: x6 = %0d, expected %0d (OR)", dut.u_id.regfile[6], expected);
+            error_count = error_count + 1;
+        end else $display("PASS: x6 = %0d (OR: %0d | %0d)", dut.u_id.regfile[6], x1_val, x2_val);
+        
+        // Verify XOR: x7 = x1 ^ x2
+        expected = x1_val ^ x2_val;
+        if (dut.u_id.regfile[7] !== expected) begin
+            $display("FAIL: x7 = %0d, expected %0d (XOR)", dut.u_id.regfile[7], expected);
+            error_count = error_count + 1;
+        end else $display("PASS: x7 = %0d (XOR: %0d ^ %0d)", dut.u_id.regfile[7], x1_val, x2_val);
+        
+        // Summary
+        $display("\n-------------------------------------------");
+        if (error_count == 0) begin
+            $display("ALL TESTS PASSED!");
+        end else begin
+            $display("TESTS FAILED: %0d errors", error_count);
+        end
+        $display("-------------------------------------------");
         
         $display("\n===========================================");
         $display("Simulation Complete!");

@@ -1,7 +1,9 @@
-`timescale 1ns/1ps
-
 // RISC-V Package - Common definitions
 // RV32I Base Integer Instruction Set
+// Note: No timescale here - let including modules define it
+
+`ifndef RISCV_PKG_V
+`define RISCV_PKG_V
 
 // Opcodes
 `define OP_LUI      7'b0110111
@@ -39,3 +41,15 @@
 `define FWD_NONE    2'b00
 `define FWD_EX_MEM  2'b01
 `define FWD_MEM_WB  2'b10
+
+// Flag Register Bit Positions
+// FLAGS = {28'b0, V, C, N, Z}
+`define FLAG_Z      0   // Zero Flag
+`define FLAG_N      1   // Negative Flag  
+`define FLAG_C      2   // Carry Flag
+`define FLAG_V      3   // Overflow Flag
+
+// Flag Register Width
+`define FLAGS_WIDTH 4
+
+`endif // RISCV_PKG_V

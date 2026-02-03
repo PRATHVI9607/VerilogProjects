@@ -52,7 +52,11 @@ module execute (
     
     // Forwarding mux select outputs (for waveform visualization)
     output wire [1:0]  fwd_a_sel,
-    output wire [1:0]  fwd_b_sel
+    output wire [1:0]  fwd_b_sel,
+    
+    // Flag register outputs
+    output reg  [3:0]  flags_out,      // {V, C, N, Z}
+    output reg         flags_valid     // Flag update valid signal
 );
 
     // Forwarding mux outputs
@@ -62,6 +66,16 @@ module execute (
     
     // ALU result wire
     reg [31:0] alu_out;
+    
+    // Extended ALU result for carry detection
+    reg [32:0] alu_out_extended;
+    
+    // Flag computation wires
+    wire flag_zero;
+    wire flag_negative;
+    wire flag_carry;
+    wire flag_overflow;
+    wire [3:0] flags_computed;
     
     // Branch comparison result
     reg branch_cmp;
@@ -73,6 +87,7 @@ module execute (
     // Forwarding MUX for operand A
     always @(*) begin
         case (forward_a)
+            `FWD_NONE:   alu_operand_a = rs1_data_in;
             `FWD_EX_MEM: alu_operand_a = ex_mem_result;
             `FWD_MEM_WB: alu_operand_a = mem_wb_result;
             default:     alu_operand_a = rs1_data_in;
@@ -82,6 +97,7 @@ module execute (
     // Forwarding MUX for operand B (pre-ALU src mux)
     always @(*) begin
         case (forward_b)
+            `FWD_NONE:   rs2_forwarded = rs2_data_in;
             `FWD_EX_MEM: rs2_forwarded = ex_mem_result;
             `FWD_MEM_WB: rs2_forwarded = mem_wb_result;
             default:     rs2_forwarded = rs2_data_in;
@@ -96,20 +112,82 @@ module execute (
     // ALU Operation
     always @(*) begin
         case (alu_op_in)
-            `ALU_ADD:    alu_out = alu_operand_a + alu_operand_b;
-            `ALU_SUB:    alu_out = alu_operand_a - alu_operand_b;
-            `ALU_SLL:    alu_out = alu_operand_a << alu_operand_b[4:0];
-            `ALU_SLT:    alu_out = ($signed(alu_operand_a) < $signed(alu_operand_b)) ? 32'd1 : 32'd0;
-            `ALU_SLTU:   alu_out = (alu_operand_a < alu_operand_b) ? 32'd1 : 32'd0;
-            `ALU_XOR:    alu_out = alu_operand_a ^ alu_operand_b;
-            `ALU_SRL:    alu_out = alu_operand_a >> alu_operand_b[4:0];
-            `ALU_SRA:    alu_out = $signed(alu_operand_a) >>> alu_operand_b[4:0];
-            `ALU_OR:     alu_out = alu_operand_a | alu_operand_b;
-            `ALU_AND:    alu_out = alu_operand_a & alu_operand_b;
-            `ALU_PASS_B: alu_out = alu_operand_b;
-            default:     alu_out = 32'b0;
+            `ALU_ADD: begin
+                alu_out = alu_operand_a + alu_operand_b;
+                alu_out_extended = {1'b0, alu_operand_a} + {1'b0, alu_operand_b};
+            end
+            `ALU_SUB: begin
+                alu_out = alu_operand_a - alu_operand_b;
+                alu_out_extended = {1'b0, alu_operand_a} - {1'b0, alu_operand_b};
+            end
+            `ALU_SLL: begin
+                alu_out = alu_operand_a << alu_operand_b[4:0];
+                alu_out_extended = {1'b0, alu_out};
+            end
+            `ALU_SLT: begin
+                alu_out = ($signed(alu_operand_a) < $signed(alu_operand_b)) ? 32'd1 : 32'd0;
+                alu_out_extended = {1'b0, alu_out};
+            end
+            `ALU_SLTU: begin
+                alu_out = (alu_operand_a < alu_operand_b) ? 32'd1 : 32'd0;
+                alu_out_extended = {1'b0, alu_out};
+            end
+            `ALU_XOR: begin
+                alu_out = alu_operand_a ^ alu_operand_b;
+                alu_out_extended = {1'b0, alu_out};
+            end
+            `ALU_SRL: begin
+                alu_out = alu_operand_a >> alu_operand_b[4:0];
+                alu_out_extended = {1'b0, alu_out};
+            end
+            `ALU_SRA: begin
+                alu_out = $signed(alu_operand_a) >>> alu_operand_b[4:0];
+                alu_out_extended = {1'b0, alu_out};
+            end
+            `ALU_OR: begin
+                alu_out = alu_operand_a | alu_operand_b;
+                alu_out_extended = {1'b0, alu_out};
+            end
+            `ALU_AND: begin
+                alu_out = alu_operand_a & alu_operand_b;
+                alu_out_extended = {1'b0, alu_out};
+            end
+            `ALU_PASS_B: begin
+                alu_out = alu_operand_b;
+                alu_out_extended = {1'b0, alu_out};
+            end
+            default: begin
+                alu_out = 32'b0;
+                alu_out_extended = 33'b0;
+            end
         endcase
     end
+    
+    // Flag computation
+    // Zero Flag: Result is zero
+    assign flag_zero = (alu_out == 32'b0);
+    
+    // Negative Flag: MSB of result is set
+    assign flag_negative = alu_out[31];
+    
+    // Carry Flag: For ADD = carry out; For SUB = borrow (inverted carry)
+    // SUB uses A + ~B + 1, so carry=1 means no borrow (A >= B)
+    // We use borrow convention: carry=1 means borrow occurred (A < B for unsigned)
+    assign flag_carry = (alu_op_in == `ALU_SUB) ? 
+                        (alu_operand_a < alu_operand_b) :  // Borrow for SUB
+                        alu_out_extended[32];              // Carry out for ADD
+    
+    // Overflow Flag: Signed overflow detection
+    // For ADD: overflow if operands have same sign but result has different sign
+    // For SUB: overflow if operands have different signs and result has different sign from A
+    assign flag_overflow = (alu_op_in == `ALU_ADD) ? 
+                           ((alu_operand_a[31] == alu_operand_b[31]) && (alu_out[31] != alu_operand_a[31])) :
+                           (alu_op_in == `ALU_SUB) ?
+                           ((alu_operand_a[31] != alu_operand_b[31]) && (alu_out[31] != alu_operand_a[31])) :
+                           1'b0;
+    
+    // Combine flags: {V, C, N, Z}
+    assign flags_computed = {flag_overflow, flag_carry, flag_negative, flag_zero};
     
     // Branch comparison
     always @(*) begin
@@ -126,7 +204,8 @@ module execute (
     
     // Branch/Jump resolution
     assign branch_taken = valid_in && (jump_in || (branch_in && branch_cmp));
-    assign branch_target = jump_in ? alu_out : (pc_in + imm_in);
+    // JALR clears LSB per RISC-V spec; branches use PC-relative offset
+    assign branch_target = jump_in ? {alu_out[31:1], 1'b0} : (pc_in + imm_in);
     
     // Pipeline register
     always @(posedge clk or negedge rst_n) begin
@@ -140,6 +219,8 @@ module execute (
             mem_to_reg_out <= 1'b0;
             funct3_out <= 3'b0;
             valid_out <= 1'b0;
+            flags_out <= 4'b0;
+            flags_valid <= 1'b0;
         end else begin
             alu_result <= jump_in ? (pc_in + 4) : alu_out;  // JAL/JALR stores return address
             rs2_data_out <= rs2_forwarded;
@@ -149,7 +230,12 @@ module execute (
             reg_write_out <= reg_write_in;
             mem_to_reg_out <= mem_to_reg_in;
             funct3_out <= funct3_in;
-            valid_out <= valid_in && !branch_taken;
+            // For JAL/JALR: keep valid so return address is written to rd
+            // For branches: invalidate if branch is taken (flush wrong-path)
+            valid_out <= valid_in && !(branch_in && branch_cmp);
+            // Update flags only for ALU operations (not branches, loads, stores)
+            flags_out <= flags_computed;
+            flags_valid <= valid_in && !jump_in && !branch_in && !mem_read_in && !mem_write_in;
         end
     end
 

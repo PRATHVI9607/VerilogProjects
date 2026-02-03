@@ -1,4 +1,5 @@
 `timescale 1ns/1ps
+
 // Instruction Decode Stage (ID)
 // Decodes instruction and reads register file
 
@@ -68,10 +69,10 @@ module instruction_decode (
                    instruction_in[20], instruction_in[30:21], 1'b0};
     
     // Initialize register file
-    integer i;
+    integer reg_idx;
     initial begin
-        for (i = 0; i < 32; i = i + 1) begin
-            regfile[i] = 32'b0;
+        for (reg_idx = 0; reg_idx < 32; reg_idx = reg_idx + 1) begin
+            regfile[reg_idx] = 32'b0;
         end
     end
     
