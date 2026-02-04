@@ -172,6 +172,27 @@ module tb_riscv_cpu;
             error_count = error_count + 1;
         end else $display("PASS: x7 = %0d (XOR: %0d ^ %0d)", dut.u_id.regfile[7], x1_val, x2_val);
         
+        // Verify ADDI: x22 = x1 + 5
+        expected = x1_val + 5;
+        if (dut.u_id.regfile[22] !== expected) begin
+            $display("FAIL: x22 = %0d, expected %0d (ADDI)", dut.u_id.regfile[22], expected);
+            error_count = error_count + 1;
+        end else $display("PASS: x22 = %0d (ADDI: %0d + 5)", dut.u_id.regfile[22], x1_val);
+        
+        // Verify ADDI: x23 = x2 + 2
+        expected = x2_val + 2;
+        if (dut.u_id.regfile[23] !== expected) begin
+            $display("FAIL: x23 = %0d, expected %0d (ADDI)", dut.u_id.regfile[23], expected);
+            error_count = error_count + 1;
+        end else $display("PASS: x23 = %0d (ADDI: %0d + 2)", dut.u_id.regfile[23], x2_val);
+        
+        // Verify ADD: x24 = x22 + x23 = (x1+5) + (x2+2)
+        expected = (x1_val + 5) + (x2_val + 2);
+        if (dut.u_id.regfile[24] !== expected) begin
+            $display("FAIL: x24 = %0d, expected %0d (ADD)", dut.u_id.regfile[24], expected);
+            error_count = error_count + 1;
+        end else $display("PASS: x24 = %0d (ADD: x22 + x23 = %0d + %0d)", dut.u_id.regfile[24], x1_val+5, x2_val+2);
+        
         // Summary
         $display("\n-------------------------------------------");
         if (error_count == 0) begin
