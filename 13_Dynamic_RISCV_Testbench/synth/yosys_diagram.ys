@@ -1,0 +1,33 @@
+# Yosys Synthesis Script for Pipelined RISC-V CPU
+# Generates cleaner block diagrams with better layout
+
+# Read package file first
+read_verilog -sv ../rtl/riscv_pkg.v
+
+# Read synthesis-friendly versions (no $fopen, $display, etc.)
+read_verilog -sv -I . instruction_fetch_synth.v
+read_verilog -sv -I . instruction_decode_synth.v
+read_verilog -sv -I ../rtl ../rtl/execute.v
+read_verilog -sv -I . memory_stage_synth.v
+read_verilog -sv -I ../rtl ../rtl/writeback.v
+read_verilog -sv -I ../rtl ../rtl/forwarding_unit.v
+read_verilog -sv -I ../rtl ../rtl/hazard_unit.v
+read_verilog -sv -I ../rtl ../rtl/riscv_cpu.v
+
+# Hierarchy check and elaborate
+hierarchy -check -top riscv_cpu
+
+# Generate clean hierarchical block diagram
+# -notitle: removes title box
+# -stretch: improve layout spacing
+# -enum: better signal grouping
+show -notitle -format svg -prefix riscv_cpu_clean -colors 42 -width -stretch riscv_cpu
+
+# Generate DOT file with rankdir=LR for left-to-right flow (pipeline style)
+show -notitle -format dot -prefix riscv_cpu_pipeline -colors 42 -width riscv_cpu
+
+# Print hierarchy information
+stat -top riscv_cpu
+
+# Write RTLIL for reference
+write_rtlil riscv_cpu.rtlil

@@ -1,0 +1,44 @@
+// Comprehensive test program for Pipelined RISC-V CPU
+// Tests: ALU ops, shifts, memory, branches, jumps
+
+// ===== SETUP: Load test values =====
+01400093    // addi x1, x0, 20      ; x1 = 20
+00C00113    // addi x2, x0, 12      ; x2 = 12
+
+// ===== ALU R-TYPE OPERATIONS =====
+002081B3    // add x3, x1, x2       ; x3 = 20 + 12 = 32
+40208233    // sub x4, x1, x2       ; x4 = 20 - 12 = 8
+0020F2B3    // and x5, x1, x2       ; x5 = 20 & 12 = 4  (10100 & 01100)
+0020E333    // or x6, x1, x2        ; x6 = 20 | 12 = 28 (10100 | 01100)
+0020C3B3    // xor x7, x1, x2       ; x7 = 20 ^ 12 = 24 (10100 ^ 01100)
+
+// ===== SHIFT OPERATIONS =====
+00209433    // sll x8, x1, x2       ; x8 = 20 << 12 = 81920
+0020D4B3    // srl x9, x1, x2       ; x9 = 20 >> 12 = 0
+0020A533    // slt x10, x1, x2      ; x10 = 0 (20 < 12 is false)
+0020A5B3    // slt x11, x1, x2      ; x11 = 0 (20 < 12 is false)
+
+// ===== IMMEDIATE OPERATIONS =====
+00708613    // addi x12, x1, 7      ; x12 = 20 + 7 = 27
+0FF0F693    // andi x13, x1, 255    ; x13 = 20 & 0xFF = 20
+01016713    // ori x14, x2, 16      ; x14 = 12 | 16 = 28
+00F14793    // xori x15, x2, 15     ; x15 = 12 ^ 15 = 3
+
+// ===== SHIFT IMMEDIATE =====
+00311813    // slli x16, x2, 3      ; x16 = 12 << 3 = 96
+00215893    // srli x17, x2, 2      ; x17 = 12 >> 2 = 3
+
+// ===== MEMORY OPERATIONS =====
+00112023    // sw x1, 0(x2)         ; mem[12] = 20
+00012903    // lw x18, 0(x2)        ; x18 = mem[12] = 20
+
+// ===== YOUR NEW INSTRUCTIONS HERE =====  <-- ADD HERE
+00508B13    // addi x22, x1, 5      ; x22 = 20 + 5 = 25
+00210B93    // addi x23, x2, 2      ; x23 = 12 + 2 = 14
+017B0C33    // add x24, x22, x23    ; x24 = 25 + 14 = 39
+
+// ===== PADDING =====
+00000013    // nop
+00000013    // nop
+00000013    // nop
+00000013    // nop
