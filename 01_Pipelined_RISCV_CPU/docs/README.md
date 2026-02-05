@@ -30,13 +30,13 @@ make help     # Show all commands
 ## Pipeline Architecture
 
 ```
-┌──────┐    ┌──────┐    ┌──────┐    ┌──────┐    ┌──────┐
-│  IF  │───▶│  ID  │───▶│  EX  │───▶│ MEM  │───▶│  WB  │
-│ IMEM │    │RegFile│   │ ALU  │    │ DMEM │    │ MUX  │
-│  PC  │    │Decode │   │FLAGS │    │      │    │      │
-└──────┘    └──────┘    └──────┘    └──────┘    └──────┘
-                            ▲           │           │
-                            └───────────┴───────────┘
++------+    +------+    +------+    +------+    +------+
+|  IF  |--->|  ID  |--->|  EX  |--->| MEM  |--->|  WB  |
+| IMEM |    |RegFile    | ALU  |    | DMEM |    | MUX  |
+|  PC  |    |Decode |   |FLAGS |    |      |    |      |
++------+    +------+    +------+    +------+    +------+
+                            ^           |           |
+                            +-----------+-----------+
                                Forwarding Paths
 ```
 
@@ -44,24 +44,24 @@ make help     # Show all commands
 
 ```
 01_Pipelined_RISCV_CPU/
-├── docs/                      # Documentation
-│   ├── README.md
-│   ├── INSTRUCTION_FORMAT.md
-│   └── DESIGN_ARCHITECTURE.md
-├── rtl/                       # Verilog RTL
-│   ├── riscv_pkg.v           # Definitions
-│   ├── instruction_fetch.v   # IF stage
-│   ├── instruction_decode.v  # ID stage
-│   ├── execute.v             # EX stage + flags
-│   ├── memory_stage.v        # MEM stage
-│   ├── writeback.v           # WB stage
-│   ├── forwarding_unit.v     # Data forwarding
-│   ├── hazard_unit.v         # Hazard detection
-│   └── riscv_cpu.v           # Top-level
-├── tb/                        # Testbenches
-├── synth/                     # Block diagrams
-├── Makefile                   # Build automation
-└── program.hex                # Test program
++-- docs/                      # Documentation
+|   +-- README.md
+|   +-- INSTRUCTION_FORMAT.md
+|   +-- DESIGN_ARCHITECTURE.md
++-- rtl/                       # Verilog RTL
+|   +-- riscv_pkg.v           # Definitions
+|   +-- instruction_fetch.v   # IF stage
+|   +-- instruction_decode.v  # ID stage
+|   +-- execute.v             # EX stage + flags
+|   +-- memory_stage.v        # MEM stage
+|   +-- writeback.v           # WB stage
+|   +-- forwarding_unit.v     # Data forwarding
+|   +-- hazard_unit.v         # Hazard detection
+|   +-- riscv_cpu.v           # Top-level
++-- tb/                        # Testbenches
++-- synth/                     # Block diagrams
++-- Makefile                   # Build automation
++-- program.hex                # Test program
 ```
 
 ## Test Results
