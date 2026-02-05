@@ -1,178 +1,687 @@
+/*
+ * ============================================================================
+ *                    PIPELINED RISC-V CPU - RV32I ARCHITECTURE
+ * ============================================================================
+ * 5-Stage Pipeline: IF → ID → EX → MEM → WB
+ * 
+ * Features:
+ *   - Data Forwarding (EX→EX, MEM→EX)
+ *   - Hazard Detection (Load-Use Stalls)
+ *   - Branch Resolution in EX Stage
+ *   - Flag Register (Z, N, C, V)
+ * 
+ * Generate SVG: dot -Tsvg riscv_pipeline_clean.dot -o riscv_pipeline_clean.svg
+ * Generate PNG: dot -Tpng riscv_pipeline_clean.dot -o riscv_pipeline_clean.png
+ * ============================================================================
+ */
+
 digraph riscv_pipeline {
-    // Graph-level attributes for clean pipeline visualization
+    
+    // =========================================================================
+    // GRAPH SETTINGS
+    // =========================================================================
     graph [
-        rankdir=LR
-        splines=ortho
-        nodesep=1.0
-        ranksep=2.0
-        fontname="Helvetica"
-        fontsize=14
-        bgcolor="white"
-        pad=0.5
+        rankdir=LR              // Left-to-Right pipeline flow
+        splines=polyline        // Cleaner line routing
+        nodesep=0.6             // Space between nodes
+        ranksep=1.2             // Space between pipeline stages
+        fontname="Arial"
+        fontsize=12
+        bgcolor="#FAFAFA"       // Light gray background
+        pad=0.3
+        compound=true           // Allow edges to/from clusters
+        newrank=true            // Better ranking algorithm
     ];
     
     // Default node styling
     node [
         shape=box
         style="rounded,filled"
-        fontname="Helvetica"
-        fontsize=10
-        penwidth=2
-        height=1.0
-        width=1.8
+        fontname="Arial"
+        fontsize=9
+        penwidth=1.5
+        margin="0.15,0.1"
     ];
     
     // Default edge styling  
     edge [
-        fontname="Helvetica"
-        fontsize=8
-        penwidth=1.5
-        arrowsize=0.7
+        fontname="Arial"
+        fontsize=7
+        penwidth=1.2
+        arrowsize=0.6
     ];
 
-    // ==========================================
-    // PIPELINE STAGES
-    // ==========================================
+    // =========================================================================
+    //                          STAGE 1: INSTRUCTION FETCH (IF)
+    // =========================================================================
     
-    // IF Stage
     subgraph cluster_if {
-        label="IF"
+        label=<<B>INSTRUCTION FETCH (IF)</B>>
         labelloc=t
         style="rounded,filled"
         fillcolor="#E3F2FD"
-        color="#1976D2"
+        color="#1565C0"
         penwidth=2
+        margin=15
         
-        IF_PC [label="PC" fillcolor="#BBDEFB" height=0.6]
-        IF_IMEM [label="IMEM\n256x32" fillcolor="#90CAF9"]
+        IF_PC [
+            label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><B>PC</B></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">Program Counter</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">32-bit</FONT></TD></TR>
+            </TABLE>>
+            fillcolor="#BBDEFB"
+            width=1.1
+        ]
+        
+        IF_IMEM [
+            label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><B>IMEM</B></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">Instruction Memory</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">256 × 32 bits</FONT></TD></TR>
+            </TABLE>>
+            fillcolor="#90CAF9"
+            width=1.3
+        ]
+        
+        IF_PC -> IF_IMEM [label="addr" color="#1565C0" fontcolor="#1565C0"]
     }
     
     // IF/ID Pipeline Register
-    IFID [label="IF/ID\nReg" shape=box fillcolor="#CFD8DC" width=0.5 height=1.5]
+    IFID [
+        label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1">
+            <TR><TD><B>IF/ID</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="6">──────</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="6">PC[31:0]</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="6">Inst[31:0]</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="6">Valid</FONT></TD></TR>
+        </TABLE>>
+        shape=box
+        fillcolor="#B0BEC5"
+        color="#546E7A"
+        width=0.7
+        penwidth=2
+    ]
     
-    // ID Stage
+    // =========================================================================
+    //                          STAGE 2: INSTRUCTION DECODE (ID)
+    // =========================================================================
+    
     subgraph cluster_id {
-        label="ID"
+        label=<<B>INSTRUCTION DECODE (ID)</B>>
         labelloc=t
         style="rounded,filled"
         fillcolor="#E8F5E9"
-        color="#388E3C"
+        color="#2E7D32"
         penwidth=2
+        margin=15
         
-        ID_DEC [label="Decoder" fillcolor="#A5D6A7"]
-        ID_RF [label="RegFile\n32x32" fillcolor="#81C784"]
-        ID_IMM [label="Imm Gen" fillcolor="#A5D6A7"]
-        ID_CTRL [label="Control" fillcolor="#C8E6C9"]
+        ID_DEC [
+            label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><B>DECODER</B></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">Opcode, Funct3/7</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">rd, rs1, rs2</FONT></TD></TR>
+            </TABLE>>
+            fillcolor="#A5D6A7"
+            width=1.2
+        ]
+        
+        ID_RF [
+            label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><B>REGISTER FILE</B></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">x0 - x31</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">32 × 32 bits</FONT></TD></TR>
+            </TABLE>>
+            fillcolor="#81C784"
+            width=1.2
+        ]
+        
+        ID_IMM [
+            label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><B>IMM GEN</B></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">I/S/B/U/J Types</FONT></TD></TR>
+            </TABLE>>
+            fillcolor="#A5D6A7"
+            width=1.0
+        ]
+        
+        ID_CTRL [
+            label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><B>CONTROL</B></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">ALU Op, MemR/W</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">RegW, Branch</FONT></TD></TR>
+            </TABLE>>
+            fillcolor="#C8E6C9"
+            width=1.0
+        ]
+        
+        // Internal ID connections
+        ID_DEC -> ID_RF [style=invis weight=10]
+        ID_DEC -> ID_IMM [style=invis weight=10]
+        ID_DEC -> ID_CTRL [style=invis weight=10]
     }
     
     // ID/EX Pipeline Register
-    IDEX [label="ID/EX\nReg" shape=box fillcolor="#CFD8DC" width=0.5 height=1.5]
+    IDEX [
+        label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1">
+            <TR><TD><B>ID/EX</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="6">──────</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="6">PC, RS1, RS2</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="6">Imm, Rd</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="6">ALU_Op</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="6">Control Sigs</FONT></TD></TR>
+        </TABLE>>
+        shape=box
+        fillcolor="#B0BEC5"
+        color="#546E7A"
+        width=0.8
+        penwidth=2
+    ]
     
-    // EX Stage
+    // =========================================================================
+    //                          STAGE 3: EXECUTE (EX)
+    // =========================================================================
+    
     subgraph cluster_ex {
-        label="EX"
+        label=<<B>EXECUTE (EX)</B>>
         labelloc=t
         style="rounded,filled"
         fillcolor="#FFF3E0"
-        color="#F57C00"
+        color="#E65100"
         penwidth=2
+        margin=15
         
-        EX_MUX [label="Fwd\nMux" fillcolor="#FFE0B2" width=0.8]
-        EX_ALU [label="ALU" fillcolor="#FFCC80"]
-        EX_BR [label="Branch" fillcolor="#FFE0B2"]
-        EX_FLAGS [label="FLAGS\nZ N C V" fillcolor="#FFD54F" penwidth=3]
+        EX_MUXA [
+            label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1">
+                <TR><TD><B>MUX A</B></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">Forward Sel</FONT></TD></TR>
+            </TABLE>>
+            fillcolor="#FFE0B2"
+            width=0.9
+        ]
+        
+        EX_MUXB [
+            label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1">
+                <TR><TD><B>MUX B</B></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">Forward/Imm</FONT></TD></TR>
+            </TABLE>>
+            fillcolor="#FFE0B2"
+            width=0.9
+        ]
+        
+        EX_ALU [
+            label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><B>ALU</B></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">ADD, SUB, AND</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">OR, XOR, SLT</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">SLL, SRL, SRA</FONT></TD></TR>
+            </TABLE>>
+            fillcolor="#FFCC80"
+            width=1.2
+            penwidth=2
+        ]
+        
+        EX_BR [
+            label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><B>BRANCH</B></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">Compare</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">Target Calc</FONT></TD></TR>
+            </TABLE>>
+            fillcolor="#FFE0B2"
+            width=1.0
+        ]
+        
+        EX_FLAGS [
+            label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><B>FLAGS</B></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">Z - Zero</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">N - Negative</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">C - Carry</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">V - Overflow</FONT></TD></TR>
+            </TABLE>>
+            fillcolor="#FFD54F"
+            width=1.0
+            penwidth=2.5
+            color="#F57F17"
+        ]
+        
+        // Internal EX connections
+        EX_MUXA -> EX_ALU [label="opA" color="#E65100" fontcolor="#E65100"]
+        EX_MUXB -> EX_ALU [label="opB" color="#E65100" fontcolor="#E65100"]
+        EX_ALU -> EX_FLAGS [label="result" color="#F57F17" fontcolor="#F57F17" penwidth=1.5]
     }
     
     // EX/MEM Pipeline Register  
-    EXMEM [label="EX/MEM\nReg" shape=box fillcolor="#CFD8DC" width=0.5 height=1.5]
+    EXMEM [
+        label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1">
+            <TR><TD><B>EX/MEM</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="6">──────</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="6">ALU Result</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="6">RS2 Data</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="6">Rd, Control</FONT></TD></TR>
+        </TABLE>>
+        shape=box
+        fillcolor="#B0BEC5"
+        color="#546E7A"
+        width=0.8
+        penwidth=2
+    ]
     
-    // MEM Stage
+    // =========================================================================
+    //                          STAGE 4: MEMORY (MEM)
+    // =========================================================================
+    
     subgraph cluster_mem {
-        label="MEM"
+        label=<<B>MEMORY (MEM)</B>>
         labelloc=t
         style="rounded,filled"
         fillcolor="#F3E5F5"
-        color="#7B1FA2"
+        color="#6A1B9A"
         penwidth=2
+        margin=15
         
-        MEM_DMEM [label="DMEM\n1KB" fillcolor="#CE93D8"]
+        MEM_DMEM [
+            label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><B>DATA MEMORY</B></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">1 KB (1024 bytes)</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">LB/LH/LW</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">SB/SH/SW</FONT></TD></TR>
+            </TABLE>>
+            fillcolor="#CE93D8"
+            width=1.3
+        ]
     }
     
     // MEM/WB Pipeline Register
-    MEMWB [label="MEM/WB\nReg" shape=box fillcolor="#CFD8DC" width=0.5 height=1.5]
+    MEMWB [
+        label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1">
+            <TR><TD><B>MEM/WB</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="6">──────</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="6">ALU Result</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="6">Mem Data</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="6">Rd, Control</FONT></TD></TR>
+        </TABLE>>
+        shape=box
+        fillcolor="#B0BEC5"
+        color="#546E7A"
+        width=0.8
+        penwidth=2
+    ]
     
-    // WB Stage
+    // =========================================================================
+    //                          STAGE 5: WRITE BACK (WB)
+    // =========================================================================
+    
     subgraph cluster_wb {
-        label="WB"
+        label=<<B>WRITE BACK (WB)</B>>
         labelloc=t
         style="rounded,filled"
         fillcolor="#FFEBEE"
-        color="#C62828"
+        color="#B71C1C"
         penwidth=2
+        margin=15
         
-        WB_MUX [label="WB\nMux" fillcolor="#FFCDD2"]
+        WB_MUX [
+            label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><B>WB MUX</B></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">MemToReg Select</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">ALU / Mem Data</FONT></TD></TR>
+            </TABLE>>
+            fillcolor="#FFCDD2"
+            width=1.2
+        ]
+    }
+    
+    // =========================================================================
+    //                          CONTROL UNITS
+    // =========================================================================
+    
+    subgraph cluster_control {
+        label=<<B>CONTROL UNITS</B>>
+        labelloc=t
+        style="rounded,filled,dashed"
+        fillcolor="#ECEFF1"
+        color="#607D8B"
+        penwidth=1.5
+        margin=12
+        
+        HU [
+            label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><B>HAZARD UNIT</B></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">Load-Use Detection</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">Stall IF/ID</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">Flush EX</FONT></TD></TR>
+            </TABLE>>
+            fillcolor="#F48FB1"
+            color="#C2185B"
+            width=1.3
+        ]
+        
+        FU [
+            label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><B>FORWARDING UNIT</B></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">EX/MEM → EX</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">MEM/WB → EX</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">forward_a/b[1:0]</FONT></TD></TR>
+            </TABLE>>
+            fillcolor="#80DEEA"
+            color="#00838F"
+            width=1.4
+        ]
     }
 
-    // ==========================================
-    // CONTROL UNITS (Bottom)
-    // ==========================================
+    // =========================================================================
+    //                          FLAG OUTPUT
+    // =========================================================================
     
-    HU [label="Hazard\nUnit" fillcolor="#F48FB1" style="rounded,filled"]
-    FU [label="Forwarding\nUnit" fillcolor="#80DEEA" style="rounded,filled"]
+    subgraph cluster_flags {
+        label=<<B>FLAG OUTPUT</B>>
+        labelloc=t
+        style="rounded,filled"
+        fillcolor="#FFFDE7"
+        color="#F9A825"
+        penwidth=2
+        margin=10
+        
+        FLAG_REG [
+            label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><B>FLAG REGISTER</B></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">Clocked on posedge</FONT></TD></TR>
+            </TABLE>>
+            fillcolor="#FFF59D"
+            color="#F57F17"
+            penwidth=2
+        ]
+        
+        FLAGS_OUT [
+            label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1">
+                <TR><TD><B>flags[3:0]</B></TD></TR>
+                <TR><TD><FONT POINT-SIZE="7">{V, C, N, Z}</FONT></TD></TR>
+            </TABLE>>
+            shape=ellipse
+            fillcolor="#FFEE58"
+            color="#FBC02D"
+            penwidth=2
+        ]
+        
+        FLAG_VALID [
+            label="flags_valid"
+            shape=ellipse
+            fillcolor="#C8E6C9"
+            fontsize=8
+            width=0.8
+        ]
+    }
 
-    // ==========================================
-    // FLAG REGISTER OUTPUT
-    // ==========================================
-    FLAG_REG [label="Flag\nRegister" fillcolor="#FFF59D" style="rounded,filled" penwidth=3]
-    FLAGS_OUT [label="flags[3:0]\n{V,C,N,Z}" shape=ellipse fillcolor="#FFEE58"]
+    // =========================================================================
+    //                     MAIN DATA PATH CONNECTIONS
+    // =========================================================================
+    
+    // IF → IF/ID
+    IF_IMEM -> IFID [
+        label="instruction[31:0]"
+        color="#1565C0"
+        fontcolor="#1565C0"
+        penwidth=2
+    ]
+    
+    // IF/ID → ID
+    IFID -> ID_DEC [
+        label="instruction"
+        color="#2E7D32"
+        fontcolor="#2E7D32"
+    ]
+    
+    // ID → ID/EX
+    ID_RF -> IDEX [
+        label="rs1_data\nrs2_data"
+        color="#2E7D32"
+        fontcolor="#2E7D32"
+    ]
+    
+    ID_IMM -> IDEX [
+        label="imm[31:0]"
+        color="#2E7D32"
+        fontcolor="#2E7D32"
+        style=dashed
+    ]
+    
+    ID_CTRL -> IDEX [
+        label="control"
+        color="#558B2F"
+        fontcolor="#558B2F"
+        style=dashed
+    ]
+    
+    // ID/EX → EX
+    IDEX -> EX_MUXA [
+        label="rs1_data"
+        color="#E65100"
+        fontcolor="#E65100"
+    ]
+    
+    IDEX -> EX_MUXB [
+        label="rs2/imm"
+        color="#E65100"
+        fontcolor="#E65100"
+    ]
+    
+    IDEX -> EX_BR [
+        label="branch/jump"
+        color="#E65100"
+        fontcolor="#E65100"
+        style=dashed
+    ]
+    
+    // EX → EX/MEM
+    EX_ALU -> EXMEM [
+        label="alu_result[31:0]"
+        color="#E65100"
+        fontcolor="#E65100"
+        penwidth=2
+    ]
+    
+    // EX/MEM → MEM
+    EXMEM -> MEM_DMEM [
+        label="addr/wdata"
+        color="#6A1B9A"
+        fontcolor="#6A1B9A"
+    ]
+    
+    // MEM → MEM/WB (two paths)
+    MEM_DMEM -> MEMWB [
+        label="mem_data[31:0]"
+        color="#6A1B9A"
+        fontcolor="#6A1B9A"
+    ]
+    
+    EXMEM -> MEMWB [
+        label="alu_result\n(bypass)"
+        color="#6A1B9A"
+        fontcolor="#6A1B9A"
+        style=dashed
+    ]
+    
+    // MEM/WB → WB
+    MEMWB -> WB_MUX [
+        label="alu/mem"
+        color="#B71C1C"
+        fontcolor="#B71C1C"
+    ]
+    
+    // =========================================================================
+    //                     WRITEBACK PATH (Back to Register File)
+    // =========================================================================
+    
+    WB_MUX -> ID_RF [
+        label="wb_data[31:0]\nwb_rd[4:0]"
+        color="#D32F2F"
+        fontcolor="#D32F2F"
+        style=bold
+        penwidth=2.5
+        constraint=false
+    ]
+    
+    // =========================================================================
+    //                     FLAG REGISTER PATH
+    // =========================================================================
+    
+    EX_FLAGS -> FLAG_REG [
+        label="ex_flags[3:0]"
+        color="#F57F17"
+        fontcolor="#F57F17"
+        penwidth=2
+    ]
+    
+    FLAG_REG -> FLAGS_OUT [
+        color="#FBC02D"
+        penwidth=2
+    ]
+    
+    FLAG_REG -> FLAG_VALID [
+        color="#66BB6A"
+        style=dashed
+    ]
+    
+    // =========================================================================
+    //                     FORWARDING PATHS (Cyan dashed lines)
+    // =========================================================================
+    
+    // Forwarding Unit receives rd/reg_write from EX/MEM and MEM/WB
+    EXMEM -> FU [
+        label="ex_rd\nex_reg_write"
+        color="#00838F"
+        fontcolor="#00838F"
+        style=dashed
+    ]
+    
+    MEMWB -> FU [
+        label="mem_rd\nmem_reg_write"
+        color="#00838F"
+        fontcolor="#00838F"
+        style=dashed
+    ]
+    
+    // Forwarding Unit sends select signals to EX muxes
+    FU -> EX_MUXA [
+        label="fwd_a[1:0]"
+        color="#00ACC1"
+        fontcolor="#00ACC1"
+        style=dashed
+        penwidth=1.5
+    ]
+    
+    FU -> EX_MUXB [
+        label="fwd_b[1:0]"
+        color="#00ACC1"
+        fontcolor="#00ACC1"
+        style=dashed
+        penwidth=1.5
+    ]
+    
+    // Forwarded data paths (actual data)
+    EXMEM -> EX_MUXA [
+        label="ex_mem\nresult"
+        color="#26C6DA"
+        fontcolor="#26C6DA"
+        style=bold
+        constraint=false
+    ]
+    
+    WB_MUX -> EX_MUXA [
+        label="wb_data"
+        color="#26C6DA"
+        fontcolor="#26C6DA"
+        style=bold
+        constraint=false
+    ]
+    
+    // =========================================================================
+    //                     HAZARD DETECTION PATHS (Pink dashed lines)
+    // =========================================================================
+    
+    // Hazard Unit monitors ID/EX for load-use hazards
+    IDEX -> HU [
+        label="id_ex_rd\nmem_read"
+        color="#C2185B"
+        fontcolor="#C2185B"
+        style=dashed
+    ]
+    
+    // Hazard Unit reads rs1/rs2 from IF/ID instruction
+    IFID -> HU [
+        label="rs1/rs2\naddrs"
+        color="#C2185B"
+        fontcolor="#C2185B"
+        style=dashed
+    ]
+    
+    // Hazard Unit controls stall/flush
+    HU -> IF_PC [
+        label="stall_if"
+        color="#AD1457"
+        fontcolor="#AD1457"
+        style=dashed
+        penwidth=1.5
+    ]
+    
+    HU -> IFID [
+        label="stall_id\nflush"
+        color="#AD1457"
+        fontcolor="#AD1457"
+        style=dashed
+    ]
+    
+    HU -> IDEX [
+        label="flush_ex"
+        color="#AD1457"
+        fontcolor="#AD1457"
+        style=dashed
+    ]
+    
+    // =========================================================================
+    //                     BRANCH PATH (Red bold line)
+    // =========================================================================
+    
+    EX_BR -> IF_PC [
+        label="branch_taken\nbranch_target[31:0]"
+        color="#C62828"
+        fontcolor="#C62828"
+        style=bold
+        penwidth=2.5
+        constraint=false
+    ]
+    
+    // Branch also flushes IF/ID
+    EX_BR -> IFID [
+        label="flush"
+        color="#C62828"
+        fontcolor="#C62828"
+        style=dashed
+        constraint=false
+    ]
 
-    // ==========================================
-    // DATA PATH
-    // ==========================================
+    // =========================================================================
+    //                     LAYOUT RANKING
+    // =========================================================================
     
-    // Forward path through pipeline
-    IF_PC -> IF_IMEM [color="#1976D2"]
-    IF_IMEM -> IFID [color="#1976D2"]
-    IFID -> ID_DEC [color="#388E3C"]
-    ID_DEC -> ID_RF
-    ID_DEC -> ID_IMM
-    ID_DEC -> ID_CTRL
-    ID_RF -> IDEX [color="#388E3C"]
-    ID_IMM -> IDEX [color="#388E3C"]
-    IDEX -> EX_MUX [color="#F57C00"]
-    EX_MUX -> EX_ALU [color="#F57C00"]
-    EX_ALU -> EX_FLAGS [color="#FF6F00" penwidth=2]
-    EX_ALU -> EXMEM [color="#F57C00"]
-    EXMEM -> MEM_DMEM [color="#7B1FA2"]
-    MEM_DMEM -> MEMWB [color="#7B1FA2"]
-    EXMEM -> MEMWB [color="#7B1FA2" style=dashed]
-    MEMWB -> WB_MUX [color="#C62828"]
-    
-    // Writeback path
-    WB_MUX -> ID_RF [color="#C62828" style=bold constraint=false xlabel="wb"]
-    
-    // Flag register path
-    EX_FLAGS -> FLAG_REG [color="#FF6F00" penwidth=2]
-    FLAG_REG -> FLAGS_OUT [color="#F9A825" penwidth=2]
-    
-    // Forwarding paths
-    EXMEM -> FU [color="#00838F" style=dashed]
-    MEMWB -> FU [color="#00838F" style=dashed]
-    FU -> EX_MUX [color="#00838F" style=dashed xlabel="fwd"]
-    
-    // Hazard paths
-    HU -> IF_PC [color="#AD1457" style=dashed xlabel="stall"]
-    HU -> IFID [color="#AD1457" style=dashed]
-    EX_BR -> IF_PC [color="#AD1457" style=bold constraint=false xlabel="branch"]
-    
-    // ==========================================
-    // LAYOUT HINTS
-    // ==========================================
+    // Force left-to-right pipeline order
     {rank=same; IF_PC; IF_IMEM}
+    {rank=same; IFID}
     {rank=same; ID_DEC; ID_RF; ID_IMM; ID_CTRL}
-    {rank=same; EX_MUX; EX_ALU; EX_FLAGS; EX_BR}
+    {rank=same; IDEX}
+    {rank=same; EX_MUXA; EX_MUXB; EX_ALU; EX_FLAGS; EX_BR}
+    {rank=same; EXMEM}
     {rank=same; MEM_DMEM}
+    {rank=same; MEMWB}
     {rank=same; WB_MUX}
-    {rank=same; HU; FU}
-    {rank=same; FLAG_REG; FLAGS_OUT}
+    
+    // Control units below pipeline
+    {rank=max; HU; FU}
+    
+    // Invisible edges to maintain stage ordering
+    IF_IMEM -> IFID -> ID_DEC [style=invis]
+    ID_RF -> IDEX -> EX_ALU [style=invis]
+    EX_ALU -> EXMEM -> MEM_DMEM [style=invis]
+    MEM_DMEM -> MEMWB -> WB_MUX [style=invis]
 }
