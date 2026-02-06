@@ -25,6 +25,8 @@ sim:
 	$(IVERILOG) -g2012 -o cpu_sim -I rtl $(RTL) tb/tb_riscv_cpu.v
 	@echo "=== Running simulation (cycle-by-cycle) ==="
 	$(VVP) cpu_sim
+	@echo ""
+	@echo "View waveforms: gtkwave riscv_cpu.vcd signals.gtkw"
 
 # Compile and run (quiet - just shows final results)
 run:
@@ -32,10 +34,12 @@ run:
 	@$(IVERILOG) -g2012 -o cpu_sim -I rtl $(RTL) tb/tb_riscv_cpu.v
 	@echo "=== Running simulation ==="
 	@$(VVP) cpu_sim 2>&1 | grep -E "(^x[0-9]|PASS|FAIL|ALL TESTS|Testing with|Final|====)"
+	@echo ""
+	@echo "View waveforms: gtkwave riscv_cpu.vcd signals.gtkw"
 
-# View waveforms
+# View waveforms (with pre-configured signals)
 wave: sim
-	$(GTKWAVE) riscv_cpu.vcd &
+	$(GTKWAVE) riscv_cpu.vcd signals.gtkw &
 
 # Clean all generated files
 clean:
